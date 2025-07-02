@@ -86,15 +86,34 @@ def reasoning_node(state):
         }
 
     # Route to raster or vector analysis
-    elif "elevation" in query or "height" in query:
-        state["cot_log"].append("Routing to raster_analysis")
+    elif any(term in query for term in ["elevation", "height", "meters", "m", "above", "below", "less than", "greater than"]):
+        import re
+        threshold = 50  # default fallback
+        comparison = "below"  # default fallback
+
+    # Extract threshold number
+        match_thresh = re.search(r'(?:above|below|under|over|greater than|less than)?\s*(\d{2,5})\s*m?', query)
+        if match_thresh:
+            threshold = int(match_thresh.group(1))
+            state["cot_log"].append(f"Extracted threshold: {threshold}m")
+
+    # Determine comparison direction
+        if "above" in query or "greater than" in query or "over" in query:
+            comparison = "above"
+        elif "below" in query or "less than" in query or "under" in query:
+            comparison = "below"
+
+        state["threshold"] = threshold
+        state["comparison"] = comparison
+        state["cot_log"].append(f"Comparison direction: {comparison}")
+
         return {
             **state,
             "region_path": region_path,
             "dem_path": dem_path,
-            "threshold": 50,
             "step": "raster_analysis"
         }
+
     else:
         state["cot_log"].append("Routing to vector_analysis")
         return {
